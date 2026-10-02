@@ -1,0 +1,188 @@
+name: Build IPA
+
+# Builds DriveIn on GitHub's macOS runner (Xcode 27 / iOS 27 SDK) and uploads:
+#   DriveIn-ipa            -> DriveIn.ipa, unsigned, for Sideloadly / AltStore / SideStore
+#   DriveIn-extras         -> ad-hoc signed variants carrying CarPlay entitlements
+#   DriveIn-simulator-*    -> Simulator builds with CarPlay entitlements (test CarPlay UI on a Mac for free)
+# Push a tag like v1.0.0, or run the workflow manually with "publish_release", to attach
+# the IPAs to a GitHub Release.
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Publish the IPAs as a GitHub pre-release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  device:
+    name: Device IPA (Xcode 27, iOS 27 SDK)
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i -E "iphoneos|iphonesimulator" || true
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          echo "CarPlay video APIs present in $SDK:"
+          grep -l -E "CPPlaybackConfiguration|supportsVideoPlayback|allowsMiniPlayer" \
+            "$SDK/System/Library/Frameworks/CarPlay.framework/Headers/"*.h || true
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build (Release, unsigned)
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild build \
+            -project DriveIn.xcodeproj \
+            -scheme DriveIn \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            | tee build/xcodebuild-device.log \
+            | xcbeautify --renderer github-actions
+
+      - name: Package IPAs
+        run: |
+          APP=build/DerivedData/Build/Products/Release-iphoneos/DriveIn.app
+          chmod +x scripts/package_ipa.sh
+          scripts/package_ipa.sh "$APP" dist/DriveIn.ipa
+          scripts/package_ipa.sh "$APP" dist/extras/DriveIn-CarPlayVideo-entitled.ipa Config/DriveIn-CarPlayVideo.entitlements
+          scripts/package_ipa.sh "$APP" dist/extras/DriveIn-CarPlayBrowser-entitled.ipa Config/DriveIn-CarPlayBrowser.entitlements
+          /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Info.plist"
+          ls -la dist dist/extras
+
+      - name: Upload DriveIn.ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: DriveIn-ipa
+          path: dist/DriveIn.ipa
+          if-no-files-found: error
+
+      - name: Upload entitled variants
+        uses: actions/upload-artifact@v4
+        with:
+          name: DriveIn-extras
+          path: dist/extras/*.ipa
+          if-no-files-found: error
+
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-device-log
+          path: build/xcodebuild-device.log
+
+  simulator:
+    name: Simulator app (${{ matrix.variant }})
+    runs-on: xcode-27
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [CarPlayVideo, CarPlayBrowser]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build for Simulator with CarPlay entitlements
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild build \
+            -project DriveIn.xcodeproj \
+            -scheme DriveIn \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/DerivedData \
+            DRIVEIN_SIMULATOR_ENTITLEMENTS=Config/DriveIn-${{ matrix.variant }}.entitlements \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY=- \
+            DEVELOPMENT_TEAM="" \
+            | tee build/xcodebuild-simulator.log \
+            | xcbeautify --renderer github-actions
+
+      - name: Zip Simulator app
+        run: |
+          APP=build/DerivedData/Build/Products/Release-iphonesimulator/DriveIn.app
+          codesign -d --entitlements - --xml "$APP" 2>/dev/null | plutil -p - || true
+          mkdir -p dist
+          ditto -c -k --keepParent "$APP" "dist/DriveIn-Simulator-${{ matrix.variant }}.app.zip"
+
+      - name: Upload Simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: DriveIn-simulator-${{ matrix.variant }}
+          path: dist/*.app.zip
+          if-no-files-found: error
+
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-simulator-${{ matrix.variant }}-log
+          path: build/xcodebuild-simulator.log
+
+  release:
+    name: Publish release
+    needs: [device, simulator]
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect files
+        run: |
+          mkdir -p release
+          find artifacts -type f \( -name "*.ipa" -o -name "*.app.zip" \) -exec cp {} release/ \;
+          ls -la release
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('build-{0}', github.run_number) }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('DriveIn build {0}', github.run_number) }}
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          target_commitish: ${{ github.sha }}
+          files: release/*
+          body: |
+            **DriveIn.ipa** is the file to install with Sideloadly (free or paid Apple ID).
+            The `*-entitled.ipa` files carry CarPlay entitlements and only install if you re-sign
+            them with a provisioning profile that includes those entitlements (paid account + Apple approval).
+            The `*.app.zip` files are Simulator builds for testing the CarPlay UI in Xcode's Simulator.
+            See README.md for what works with a free Apple ID.

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  WORKAROUND path: claims the navigation category so CarPlay hands the app a CPWindow,
+  which DriveIn uses to render a real WKWebView on the car display.
+  This violates the CarPlay guidelines ("The base view must be used exclusively to draw
+  a map") so Apple will not grant it for a browser. It only works if you already hold
+  com.apple.developer.carplay-maps on a paid account, or in the Simulator.
+-->
+<dict>
+	<key>com.apple.developer.carplay-maps</key>
+	<true/>
+</dict>
+</plist>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  Device build entitlements: intentionally empty.
+  Free Apple IDs (Sideloadly, AltStore, SideStore, Xcode "Personal Team") cannot
+  sign any com.apple.developer.carplay-* entitlement. See README.md.
+-->
+<dict/>
+</plist>

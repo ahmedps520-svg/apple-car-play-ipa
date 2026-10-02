@@ -1,0 +1,54 @@
+# XcodeGen spec. Generate the Xcode project with:
+#   brew install xcodegen && xcodegen generate
+name: DriveIn
+options:
+  bundleIdPrefix: io.github.ahmedps520svg
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    # Which CarPlay entitlements a *Simulator* build gets. The Simulator does not
+    # check provisioning profiles, so you can try the CarPlay UI there for free.
+    # Override with Config/DriveIn-CarPlayBrowser.entitlements for the workaround UI.
+    DRIVEIN_SIMULATOR_ENTITLEMENTS: Config/DriveIn-CarPlayVideo.entitlements
+
+targets:
+  DriveIn:
+    type: application
+    platform: iOS
+    sources:
+      - path: DriveIn
+    settings:
+      base:
+        PRODUCT_NAME: DriveIn
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.ahmedps520svg.drivein
+        INFOPLIST_FILE: Config/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        # Device builds: no CarPlay entitlements (a free Apple ID can't sign them).
+        CODE_SIGN_ENTITLEMENTS: Config/DriveIn.entitlements
+        "CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]": $(DRIVEIN_SIMULATOR_ENTITLEMENTS)
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
+
+schemes:
+  DriveIn:
+    build:
+      targets:
+        DriveIn: all
+    run:
+      config: Debug
+    archive:
+      config: Release

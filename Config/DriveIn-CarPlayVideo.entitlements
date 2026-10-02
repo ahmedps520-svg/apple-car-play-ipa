@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  OFFICIAL path (iOS 27): CarPlay video app + CarPlay audio app.
+  Apple's CarPlay Developer Guide (June 2026) lists com.apple.developer.carplay-video
+  (iOS 27) and says audio + video may be combined so the app always appears in CarPlay
+  (video-only apps are hidden in cars without the "video in car" feature).
+  Both keys must be granted to your paid developer account by Apple before a device
+  build signed with them will install. The Simulator accepts them without a profile.
+-->
+<dict>
+	<key>com.apple.developer.carplay-audio</key>
+	<true/>
+	<key>com.apple.developer.carplay-video</key>
+	<true/>
+</dict>
+</plist>
