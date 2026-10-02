@@ -173,7 +173,7 @@ jobs:
     name: Simulator smoke test (launch + screenshots)
     needs: [simulator]
     runs-on: xcode-27
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/download-artifact@v7
         with:
@@ -205,9 +205,10 @@ jobs:
           log "Booting simulator $UDID"
           limit 900 xcrun simctl bootstatus "$UDID" -b
           log "Installing DriveIn"
-          limit 180 xcrun simctl install "$UDID" sim/DriveIn.app
-          xcrun simctl privacy "$UDID" grant location "$BUNDLE" || true
-          xcrun simctl privacy "$UDID" grant motion "$BUNDLE" || true
+          limit 600 xcrun simctl install "$UDID" sim/DriveIn.app
+          log "Granting location and motion access"
+          limit 120 xcrun simctl privacy "$UDID" grant location "$BUNDLE" || true
+          limit 120 xcrun simctl privacy "$UDID" grant motion "$BUNDLE" || true
           mkdir -p shots
 
           run_app() {
@@ -217,7 +218,8 @@ jobs:
             log "Launching for $name $*"
             limit 120 xcrun simctl launch "$UDID" "$BUNDLE" "$@"
             sleep "$wait"
-            limit 60 xcrun simctl io "$UDID" screenshot "shots/$name.png"
+            # CoreSimulator can stall for about a minute while a heavy page loads on a busy runner.
+            limit 180 xcrun simctl io "$UDID" screenshot "shots/$name.png"
             log "Saved shots/$name.png"
           }
 
