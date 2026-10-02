@@ -234,6 +234,12 @@ jobs:
             exit 1
           fi
 
+          # With DriveIn in the background, its Live Activity (widget extension) shows in the
+          # Dynamic Island.
+          limit 60 xcrun simctl launch "$UDID" com.apple.Preferences > /dev/null || true
+          sleep 8
+          limit 60 xcrun simctl io "$UDID" screenshot shots/6-live-activity.png || true
+
       - name: CarPlay display (experimental)
         continue-on-error: true
         run: |
@@ -241,8 +247,9 @@ jobs:
           log() { echo "[$(date +%H:%M:%S)] $*"; }
           limit() { local seconds=$1; shift; perl -e 'alarm shift; exec @ARGV' "$seconds" "$@"; }
           UDID=$(cat sim/udid)
-          log "Opening Simulator.app for $UDID"
-          open -a Simulator --args -CurrentDeviceUDID "$UDID"
+          SIMULATOR_APP="$(xcode-select -p)/Applications/Simulator.app"
+          log "Opening $SIMULATOR_APP for $UDID"
+          open -a "$SIMULATOR_APP" --args -CurrentDeviceUDID "$UDID" || exit 0
           sleep 20
           MENU='menu 1 of menu item "External Displays" of menu 1 of menu bar item "I/O" of menu bar 1'
           log "External display menu items:"
@@ -251,7 +258,7 @@ jobs:
           limit 60 osascript -e 'tell application "Simulator" to activate' -e 'delay 2' \
             -e "tell application \"System Events\" to tell process \"Simulator\" to click (first menu item of $MENU whose name starts with \"CarPlay\")" || true
           sleep 20
-          limit 60 xcrun simctl io "$UDID" screenshot --display=external shots/6-carplay-home.png || true
+          limit 60 xcrun simctl io "$UDID" screenshot --display=external shots/7-carplay-home.png || true
           limit 60 osascript -e 'tell application "System Events" to tell process "Simulator" to get {name, position, size} of every window' || true
           ls -la shots
 

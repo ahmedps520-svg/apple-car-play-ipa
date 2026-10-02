@@ -1,3 +1,4 @@
+import ActivityKit
 import CoreLocation
 import CoreMotion
 import Foundation
@@ -120,6 +121,7 @@ struct CapabilityReport {
         features.append(Row(title: "Audio + Now Playing controls in CarPlay",
                             detail: "Any app playing audio appears in CarPlay's built-in Now Playing screen. No entitlement needed.",
                             status: .available))
+        features.append(liveActivityRow())
         features.append(Row(title: "DriveIn icon + video browsing UI in CarPlay",
                             detail: hasVideo || hasAudio
                                 ? "Your profile includes a CarPlay video/audio entitlement (official iOS 27 template UI)."
@@ -193,6 +195,26 @@ struct CapabilityReport {
             Section(title: "Signing", footer: "Read from the provisioning profile your installer embedded in DriveIn.", rows: signing),
             Section(title: "Live status", footer: nil, rows: live),
         ])
+    }
+
+    private static func liveActivityRow() -> Row {
+        let title = "Live Activity on the CarPlay Dashboard"
+        let extensionInstalled = Bundle.main.builtInPlugInsURL.map {
+            FileManager.default.fileExists(atPath: $0.appendingPathComponent("DriveInWidgets.appex").path)
+        } ?? false
+        guard extensionInstalled else {
+            return Row(title: title,
+                       detail: "This copy was installed without DriveIn's widget extension, so there's no Live Activity. Reinstall without removing app extensions.",
+                       status: .unavailable)
+        }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            return Row(title: title,
+                       detail: "Live Activities are turned off for DriveIn. Turn them on in Settings ▸ Apps ▸ DriveIn.",
+                       status: .unavailable)
+        }
+        return Row(title: title,
+                   detail: "iOS 26+ shows DriveIn's status with I'm Parked and play/pause on the CarPlay Dashboard. No entitlement needed. Open DriveIn once after connecting to start it.",
+                   status: .available)
     }
 
     private static func describe(_ status: CLAuthorizationStatus) -> String {
