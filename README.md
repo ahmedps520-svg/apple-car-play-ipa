@@ -69,17 +69,23 @@ Other artifacts:
 
 ## 2. Install with Sideloadly (Windows or macOS)
 
+You don't need a paid Apple Developer account, and you don't need to set anything up on
+the iPhone first. A normal free Apple ID (the kind you use for the App Store) is enough.
+If you'd rather not type your main Apple ID into Sideloadly, create a second free one.
+
 1. Install [Sideloadly](https://sideloadly.io). On Windows it needs the **web** versions of
    iTunes and iCloud from Apple's site. If you have the Microsoft Store versions, uninstall
    them first.
 2. Connect the iPhone by USB, unlock it and tap **Trust**.
-3. Drag `DriveIn.ipa` into Sideloadly, enter your Apple ID and click **Start**.
-4. On the iPhone:
-   - **Settings ▸ Privacy & Security ▸ Developer Mode ▸ On**, then restart (required for
-     sideloaded apps since iOS 16);
-   - **Settings ▸ General ▸ VPN & Device Management**, then trust your Apple ID's developer
-     app.
-5. Open DriveIn and allow **Location** and **Motion & Fitness**. They're used only to tell
+3. Drag `DriveIn.ipa` into Sideloadly, enter your Apple ID and click **Start**. Sideloadly
+   uses the Apple ID to sign the app for your iPhone; enter the two-factor code if asked.
+4. On the iPhone, turn on **Developer Mode**. The switch only shows up *after* Sideloadly has
+   installed an app, so it's normal not to see it before: go to **Settings ▸ Privacy &
+   Security ▸ Developer Mode** (near the bottom), turn it on, let the iPhone restart, then
+   tap **Turn On** when it asks.
+5. Go to **Settings ▸ General ▸ VPN & Device Management**, tap your Apple ID under
+   *Developer App* and tap **Trust**.
+6. Open DriveIn and allow **Location** and **Motion & Fitness**. They're used only to tell
    whether the car is parked.
 
 Free Apple ID limits: the app expires after **7 days** (re-install, or turn on Sideloadly's
