@@ -239,6 +239,11 @@ jobs:
           limit 60 xcrun simctl launch "$UDID" com.apple.Preferences > /dev/null || true
           sleep 8
           limit 60 xcrun simctl io "$UDID" screenshot shots/6-live-activity.png || true
+          log "DriveIn's log messages:"
+          limit 120 xcrun simctl spawn "$UDID" log show --last 15m --style compact \
+            --predicate "subsystem == \"$BUNDLE\"" || true
+          log "Widget extension processes:"
+          xcrun simctl spawn "$UDID" launchctl list | grep -i drivein || true
 
       - name: CarPlay display (experimental)
         continue-on-error: true
@@ -247,7 +252,11 @@ jobs:
           log() { echo "[$(date +%H:%M:%S)] $*"; }
           limit() { local seconds=$1; shift; perl -e 'alarm shift; exec @ARGV' "$seconds" "$@"; }
           UDID=$(cat sim/udid)
-          SIMULATOR_APP="$(xcode-select -p)/Applications/Simulator.app"
+          SIMULATOR_APP=$(find "$(xcode-select -p)/.." /Applications -maxdepth 6 -type d -name Simulator.app 2>/dev/null | head -1) || true
+          if [[ -z "$SIMULATOR_APP" ]]; then
+            log "Simulator.app not found"
+            exit 0
+          fi
           log "Opening $SIMULATOR_APP for $UDID"
           open -a "$SIMULATOR_APP" --args -CurrentDeviceUDID "$UDID" || exit 0
           sleep 20

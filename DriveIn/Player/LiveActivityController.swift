@@ -1,5 +1,6 @@
 import ActivityKit
 import Foundation
+import os
 import UIKit
 
 /// Shows DriveIn's parked state (and the current video) as a Live Activity while the iPhone is
@@ -16,6 +17,8 @@ final class LiveActivityController: NSObject {
     private var activity: Activity<DriveInActivityAttributes>?
     private var lastState: DriveInActivityAttributes.ContentState?
     private var started = false
+    private var loggedDisabled = false
+    private let log = Logger(subsystem: Bundle.main.bundleIdentifier ?? "DriveIn", category: "LiveActivity")
 
     private override init() {
         super.init()
@@ -55,16 +58,24 @@ final class LiveActivityController: NSObject {
             }
             return
         }
-        guard ActivityAuthorizationInfo().areActivitiesEnabled,
-              UIApplication.shared.applicationState == .active
-        else { return }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            if !loggedDisabled {
+                loggedDisabled = true
+                log.notice("Live Activities are turned off for DriveIn")
+            }
+            return
+        }
+        guard UIApplication.shared.applicationState == .active else { return }
         do {
-            activity = try Activity.request(attributes: DriveInActivityAttributes(),
-                                            content: ActivityContent(state: state, staleDate: nil),
-                                            pushType: nil)
+            let activity = try Activity.request(attributes: DriveInActivityAttributes(),
+                                                content: ActivityContent(state: state, staleDate: nil),
+                                                pushType: nil)
+            self.activity = activity
             lastState = state
+            log.notice("Started Live Activity \(activity.id, privacy: .public): \(state.drivingTitle, privacy: .public)")
         } catch {
             activity = nil
+            log.error("Couldn't start the Live Activity: \(String(describing: error), privacy: .public)")
         }
     }
 
@@ -72,6 +83,7 @@ final class LiveActivityController: NSObject {
         guard let activity = activity else { return }
         self.activity = nil
         lastState = nil
+        log.notice("Ending Live Activity \(activity.id, privacy: .public)")
         Task {
             await activity.end(nil, dismissalPolicy: .immediate)
         }
