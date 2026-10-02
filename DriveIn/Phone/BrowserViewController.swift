@@ -305,7 +305,12 @@ final class BrowserViewController: UIViewController {
     }
 
     func presentPlayer(for item: MediaItem) {
-        PlaybackController.shared.play(item)
+        let playback = PlaybackController.shared
+        if playback.currentItem?.id == item.id {
+            playback.resume()
+        } else {
+            playback.play(item)
+        }
         let player = PlayerViewController()
         player.modalPresentationStyle = .fullScreen
         present(player, animated: true)

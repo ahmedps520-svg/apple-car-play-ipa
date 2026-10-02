@@ -159,6 +159,75 @@ jobs:
           name: xcodebuild-simulator-${{ matrix.variant }}-log
           path: build/xcodebuild-simulator.log
 
+  smoke-test:
+    name: Simulator smoke test (launch + screenshots)
+    needs: [simulator]
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: DriveIn-simulator-CarPlayVideo
+          path: sim
+
+      - name: Launch DriveIn in the iOS Simulator
+        run: |
+          set -euo pipefail
+          ditto -x -k sim/DriveIn-Simulator-CarPlayVideo.app.zip sim
+          BUNDLE=io.github.ahmedps520svg.drivein
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          for runtime in sorted(devices, reverse=True):
+              if "iOS" not in runtime:
+                  continue
+              for device in devices[runtime]:
+                  if device["name"].startswith("iPhone") and device.get("isAvailable"):
+                      print(device["udid"])
+                      sys.exit(0)
+          sys.exit("no iPhone simulator found")
+          ')
+          echo "Simulator: $UDID"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" sim/DriveIn.app
+          xcrun simctl privacy "$UDID" grant location "$BUNDLE" || true
+          xcrun simctl privacy "$UDID" grant motion "$BUNDLE" || true
+          mkdir -p shots
+          shot() { sleep "$2"; xcrun simctl io "$UDID" screenshot "shots/$1.png"; }
+
+          xcrun simctl launch "$UDID" "$BUNDLE"
+          shot 1-first-launch 8
+          xcrun simctl terminate "$UDID" "$BUNDLE"
+          # NSUserDefaults argument domain: skip the welcome alert for the next screenshots.
+          xcrun simctl launch "$UDID" "$BUNDLE" -hasShownWelcome YES
+          shot 2-start-page 6
+          xcrun simctl openurl "$UDID" "drivein://open?url=https%3A%2F%2Fen.m.wikipedia.org%2Fwiki%2FDrive-in_theater"
+          shot 3-web-page 10
+          xcrun simctl openurl "$UDID" "drivein://simulate?state=driving"
+          shot 4-simulated-driving 4
+          xcrun simctl openurl "$UDID" "drivein://simulate?state=stopped"
+          shot 5-simulated-stop 15
+
+          if xcrun simctl spawn "$UDID" launchctl list | grep -q "UIKitApplication:$BUNDLE"; then
+            echo "DriveIn is still running."
+          else
+            echo "DriveIn is not running: it crashed or was killed." >&2
+            exit 1
+          fi
+
+      - name: Crash reports
+        if: always()
+        run: |
+          find ~/Library/Logs/DiagnosticReports -iname "DriveIn*" -print -exec head -80 {} \; 2>/dev/null || true
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: DriveIn-screenshots
+          path: shots/*.png
+
   release:
     name: Publish release
     needs: [device, simulator]

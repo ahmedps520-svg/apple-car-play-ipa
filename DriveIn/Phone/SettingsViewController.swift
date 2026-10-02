@@ -52,7 +52,10 @@ final class SettingsViewController: UITableViewController {
     }
 
     @objc private func reloadSettings() {
-        tableView.reloadData()
+        // Deferred: the change usually comes from a control inside this table.
+        DispatchQueue.main.async { [weak self] in
+            self?.tableView.reloadData()
+        }
     }
 
     override func numberOfSections(in tableView: UITableView) -> Int {

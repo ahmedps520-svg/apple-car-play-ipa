@@ -38,6 +38,14 @@ final class PlayerViewController: AVPlayerViewController {
         refreshGateOverlay()
     }
 
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        // Closing the player stops playback, unless the video is on an AirPlay/car display.
+        if isBeingDismissed, !PlaybackController.shared.isAirPlaying {
+            PlaybackController.shared.pause()
+        }
+    }
+
     @objc private func refreshGateOverlay() {
         let monitor = DrivingStateMonitor.shared
         let blocked = PlaybackController.shared.isVideoBlocked

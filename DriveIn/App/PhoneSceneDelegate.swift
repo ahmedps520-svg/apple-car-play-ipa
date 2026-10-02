@@ -22,9 +22,38 @@ final class PhoneSceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
     }
 
-    /// Web links shared into DriveIn open in the browser.
     private func open(_ url: URL) {
-        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return }
-        BrowserTab.main.load(url)
+        switch url.scheme?.lowercased() {
+        case "http", "https":
+            BrowserTab.main.load(url)
+        case "drivein":
+            handleDriveInURL(url)
+        default:
+            break
+        }
+    }
+
+    /// - `drivein://open?url=youtube.com` opens a page (handy for Shortcuts).
+    /// - `drivein://simulate?state=driving|stopped|off` is a testing aid. It can only add
+    ///   restrictions or return to the real sensors; it can never unlock video.
+    private func handleDriveInURL(_ url: URL) {
+        var query: [String: String] = [:]
+        for item in URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? [] {
+            if let value = item.value {
+                query[item.name] = value
+            }
+        }
+        switch url.host?.lowercased() {
+        case "open":
+            if let target = query["url"], let page = AddressParser.url(from: target) {
+                BrowserTab.main.load(page)
+            }
+        case "simulate":
+            if let state = query["state"].flatMap(DrivingSimulation.init(rawValue:)) {
+                AppSettings.shared.drivingSimulation = state
+            }
+        default:
+            break
+        }
     }
 }
