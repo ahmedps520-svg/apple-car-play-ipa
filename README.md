@@ -31,9 +31,13 @@ It ships as an unsigned **`DriveIn.ipa`** built by GitHub Actions, which you ins
 ## 1. Get the IPA
 
 1. Open the repository's **Actions** tab, then the latest green **Build IPA** run.
-2. Under **Artifacts**, download **`DriveIn-ipa`**. Unzip it to get `DriveIn.ipa`.
-   (When a release is published, the IPA is also attached on the **Releases** page.
-   To publish one, push a tag like `v1.0.0` or run the workflow with *publish_release*.)
+2. Under **Artifacts**, download **`DriveIn-ipa`** (you must be signed in to GitHub).
+   Unzip it to get `DriveIn.ipa`.
+
+To get a permanent download link instead (artifacts expire after 90 days), publish a
+release: push a tag like `v1.0.0`, and the workflow attaches the IPAs to a GitHub Release.
+Once the workflow is on your default branch, you can also use **Actions ▸ Build IPA ▸
+Run workflow ▸ publish_release**.
 
 Other artifacts:
 
@@ -79,7 +83,7 @@ SideStore are all affected. The reported workaround is to sign with a different 
 | **DriveIn icon + browsing UI on the CarPlay screen** (lists with thumbnails, search keyboard, details header, video playback) | CarPlay templates plus the iOS 26.4/27 video APIs: `CPPlaybackConfiguration`, `CPThumbnailImage`, `CPListTemplateDetailsHeader`, `CPSessionConfiguration.supportsVideoPlayback`, Search template for video apps (iOS 27) | ✅ Official (iOS 27 **CarPlay video app** category) | `com.apple.developer.carplay-video` (+ `-audio`), paid account, **Apple approval**, and a car that supports video in car | ❌ Can't be signed |
 | **A real web page drawn on the CarPlay screen** | `WKWebView` inside the `CPWindow` that CarPlay gives navigation apps; touch via map pan/zoom callbacks | ⚠️ Workaround that **violates the CarPlay guidelines** ("the base view must be used exclusively to draw a map") | `com.apple.developer.carplay-maps`, paid account, Apple approval (not granted for this use) | ❌ Can't be signed |
 | Try the CarPlay UI | Xcode Simulator ▸ I/O ▸ External Displays ▸ CarPlay, with the `DriveIn-simulator-*` builds | ✅ Official dev tool | a Mac with Xcode 27 | ✅ No paid account needed: the Simulator doesn't check provisioning profiles |
-| Jailbreak or TrollStore tweaks (CarBridge, CarTube-style apps) | private or unsigned entitlements | ⚠️ Workaround | TrollStore only covers iOS 14.0–17.0; there's no public jailbreak for iOS 27 | ❌ Not on iOS 27 |
+| Jailbreak or TrollStore tweaks (CarBridge, CarTube-style apps) | private or unsigned entitlements | ⚠️ Workaround | TrollStore only works on some versions between iOS 14.0 and 17.0; there's no public jailbreak for iOS 27 (as of October 2026) | ❌ Not on iOS 27 |
 | Hardware: CarPlay adapters with AirPlay receivers or video modes | the dongle shows AirPlay or mirrored video | ⚠️ Third-party hardware | buy an adapter | ✅ DriveIn's AirPlay button works with them |
 
 To see what *your* install can do, open DriveIn and go to **Settings ▸ What works on this
@@ -177,6 +181,11 @@ While not parked, DriveIn covers the page and video. With **Keep sound while dri
 (the default, matching CarPlay's audio-only fallback) the sound keeps playing; with it off,
 playback pauses. Video never resumes by itself. To test at home, use **Settings ▸ Simulate
 CarPlay**.
+
+**URL scheme** (for iOS Shortcuts automations, e.g. "when CarPlay connects"):
+`drivein://open?url=youtube.com` opens a page.
+`drivein://simulate?state=driving|stopped|off` switches the test simulation. It can only add
+restrictions or go back to the real sensors; it never unlocks video.
 
 ## 7. Building it yourself
 

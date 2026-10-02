@@ -7,6 +7,7 @@ final class BrowserViewController: UIViewController {
     private let browserTab: BrowserTab
 
     private let topBar = UIView()
+    private let topStack = UIStackView()
     private let addressField = UITextField()
     private let reloadButton = UIButton(type: .system)
     private let statusButton = UIButton(type: .system)
@@ -98,16 +99,26 @@ final class BrowserViewController: UIViewController {
         reloadButton.addAction(UIAction { [weak self] _ in self?.reloadOrStop() }, for: .touchUpInside)
         addressField.rightView = reloadButton
         addressField.rightViewMode = .unlessEditing
-        topBar.addSubview(addressField)
 
         var status = UIButton.Configuration.tinted()
         status.cornerStyle = .capsule
         status.buttonSize = .mini
         status.imagePadding = 6
         statusButton.configuration = status
-        statusButton.translatesAutoresizingMaskIntoConstraints = false
+        statusButton.isHidden = true
         statusButton.addAction(UIAction { [weak self] _ in self?.showCapabilities() }, for: .touchUpInside)
-        topBar.addSubview(statusButton)
+
+        // A stack so the CarPlay status pill takes no space while hidden.
+        topStack.axis = .vertical
+        topStack.alignment = .fill
+        topStack.spacing = 6
+        topStack.translatesAutoresizingMaskIntoConstraints = false
+        let statusRow = UIStackView(arrangedSubviews: [statusButton])
+        statusRow.alignment = .center
+        statusRow.axis = .vertical
+        topStack.addArrangedSubview(addressField)
+        topStack.addArrangedSubview(statusRow)
+        topBar.addSubview(topStack)
 
         progressView.translatesAutoresizingMaskIntoConstraints = false
         progressView.trackTintColor = .clear
@@ -180,14 +191,11 @@ final class BrowserViewController: UIViewController {
             topBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             topBar.topAnchor.constraint(equalTo: view.topAnchor),
 
-            addressField.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 12),
-            addressField.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -12),
-            addressField.topAnchor.constraint(equalTo: guide.topAnchor, constant: 6),
+            topStack.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 12),
+            topStack.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -12),
+            topStack.topAnchor.constraint(equalTo: guide.topAnchor, constant: 6),
+            topStack.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: -8),
             addressField.heightAnchor.constraint(equalToConstant: 40),
-
-            statusButton.topAnchor.constraint(equalTo: addressField.bottomAnchor, constant: 6),
-            statusButton.centerXAnchor.constraint(equalTo: topBar.centerXAnchor),
-            statusButton.bottomAnchor.constraint(equalTo: topBar.bottomAnchor, constant: -6),
 
             progressView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             progressView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -259,8 +267,9 @@ final class BrowserViewController: UIViewController {
         }
 
         if state == .notConnected {
-            statusButton.isHidden = true
+            statusButton.superview?.isHidden = true
         } else {
+            statusButton.superview?.isHidden = false
             statusButton.isHidden = false
             var configuration = statusButton.configuration ?? UIButton.Configuration.tinted()
             let color: UIColor

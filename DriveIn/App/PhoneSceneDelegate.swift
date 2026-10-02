@@ -14,6 +14,19 @@ final class PhoneSceneDelegate: UIResponder, UIWindowSceneDelegate {
         if let url = connectionOptions.urlContexts.first?.url {
             open(url)
         }
+        applyLaunchArguments()
+    }
+
+    /// Used by the CI smoke test: `-DriveInOpenURL <url>` and `-DriveInSimulation driving|stopped`
+    /// arrive through the UserDefaults argument domain. They can't be set on a real install.
+    private func applyLaunchArguments() {
+        let defaults = UserDefaults.standard
+        if let target = defaults.string(forKey: "DriveInOpenURL"), let page = AddressParser.url(from: target) {
+            BrowserTab.main.load(page)
+        }
+        if let state = defaults.string(forKey: "DriveInSimulation").flatMap(DrivingSimulation.init(rawValue:)) {
+            AppSettings.shared.drivingSimulation = state
+        }
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {

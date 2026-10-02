@@ -28,6 +28,7 @@ final class CarPlayWindowBrowser: NSObject {
     private var theaterOn = false
     private var gateKey = ""
     private var askedAboutParking = false
+    private weak var parkingAlert: CPAlertTemplate?
 
     // Zoom-gesture bookkeeping: a short gesture with almost no updates is a double tap.
     private var zoomStart: Date?
@@ -151,6 +152,11 @@ final class CarPlayWindowBrowser: NSObject {
         } else if monitor.state == .moving || monitor.state == .notConnected {
             askedAboutParking = false
         }
+        // The question is moot once the car moves again (or the driver confirmed elsewhere).
+        if !monitor.canConfirmParked, let alert = parkingAlert, interfaceController.presentedTemplate === alert {
+            interfaceController.dismissTemplate(animated: true, completion: nil)
+            parkingAlert = nil
+        }
     }
 
     private func askIfParked() {
@@ -163,6 +169,7 @@ final class CarPlayWindowBrowser: NSObject {
         }
         let alert = CPAlertTemplate(titleVariants: ["The browser works only when parked. Are you parked?", "Are you parked?"],
                                     actions: [parked, notNow])
+        parkingAlert = alert
         interfaceController.presentTemplate(alert, animated: true, completion: nil)
     }
 

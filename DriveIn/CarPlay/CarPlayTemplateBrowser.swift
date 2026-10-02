@@ -23,6 +23,7 @@ final class CarPlayTemplateBrowser: NSObject {
     private var browseSignature = ""
     private var videosSignature = ""
     private var loadingThumbnails = Set<URL>()
+    private weak var parkingAlert: CPAlertTemplate?
     private lazy var canUseNowPlaying: Bool = {
         // CPNowPlayingTemplate needs the audio entitlement. Without a profile (Simulator) trust the build.
         ProvisioningInfo.load().map { $0.has(.audio) } ?? true
@@ -90,6 +91,10 @@ final class CarPlayTemplateBrowser: NSObject {
     /// second while stopped, and pages report progress constantly).
     private func refreshAll() {
         refreshScheduled = false
+        if !DrivingStateMonitor.shared.canConfirmParked, let alert = parkingAlert, interfaceController.presentedTemplate === alert {
+            interfaceController.dismissTemplate(animated: true, completion: nil)
+            parkingAlert = nil
+        }
         let browse = currentBrowseSignature()
         if browse != browseSignature {
             browseSignature = browse
@@ -393,6 +398,7 @@ final class CarPlayTemplateBrowser: NSObject {
         }
         let alert = CPAlertTemplate(titleVariants: ["Video plays only when parked. Are you parked?", "Are you parked?"],
                                     actions: [parked, audio])
+        parkingAlert = alert
         interfaceController.presentTemplate(alert, animated: true, completion: nil)
     }
 

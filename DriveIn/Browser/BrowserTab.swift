@@ -19,6 +19,8 @@ final class BrowserTab: NSObject {
     private var loadWaiters: [UUID: (Bool) -> Void] = [:]
     private var scriptSignature = ""
     private var mediaSuspended = false
+    /// Set when DriveIn starts a navigation; `isLoading` can still be false at that moment.
+    private var navigationPending = false
 
     init(surface: WebSurface) {
         self.surface = surface
@@ -48,6 +50,7 @@ final class BrowserTab: NSObject {
     func load(_ url: URL) {
         isShowingStartPage = false
         clearPageMedia()
+        navigationPending = true
         webView.load(URLRequest(url: url))
         notifyChange()
     }
@@ -63,12 +66,14 @@ final class BrowserTab: NSObject {
     func showStartPage() {
         isShowingStartPage = true
         clearPageMedia()
+        navigationPending = true
         webView.loadHTMLString(StartPage.html(compact: surface == .car), baseURL: nil)
         notifyChange()
     }
 
     func goBack() {
         if webView.canGoBack {
+            navigationPending = true
             webView.goBack()
         } else if !isShowingStartPage {
             showStartPage()
@@ -77,6 +82,7 @@ final class BrowserTab: NSObject {
 
     func goForward() {
         if webView.canGoForward {
+            navigationPending = true
             webView.goForward()
         }
     }
@@ -85,11 +91,13 @@ final class BrowserTab: NSObject {
         if isShowingStartPage {
             showStartPage()
         } else {
+            navigationPending = true
             webView.reload()
         }
     }
 
     func stopLoading() {
+        navigationPending = false
         webView.stopLoading()
     }
 
@@ -106,7 +114,7 @@ final class BrowserTab: NSObject {
 
     /// Calls back once the current navigation finished (true) or failed/timed out (false).
     func whenLoaded(timeout: TimeInterval, completion: @escaping (Bool) -> Void) {
-        if !webView.isLoading {
+        if !webView.isLoading && !navigationPending {
             DispatchQueue.main.async { completion(true) }
             return
         }
@@ -373,6 +381,7 @@ extension BrowserTab: WKNavigationDelegate {
         if let url = currentURL {
             LibraryStore.shared.recordVisit(title: webView.title ?? "", url: url)
         }
+        navigationPending = false
         finishLoadWaiters(success: true)
         rescanMedia()
         notifyChange()
@@ -393,8 +402,10 @@ extension BrowserTab: WKNavigationDelegate {
     private func handleFailure(_ error: Error) {
         let nsError = error as NSError
         if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+            // Usually replaced by a newer navigation, whose result the waiters get.
             return
         }
+        navigationPending = false
         finishLoadWaiters(success: false)
         notifyChange()
     }

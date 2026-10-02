@@ -4,32 +4,6 @@ import CoreMotion
 import Foundation
 import UIKit
 
-/// What DriveIn believes the car is doing.
-enum DrivingState: Equatable {
-    /// The iPhone isn't connected to CarPlay: DriveIn is just a browser, no restrictions.
-    case notConnected
-    case moving
-    /// Standing still, but not (yet) accepted as parked.
-    case stopped
-    case parked
-    /// Connected, but no speed or motion data (permissions denied, no GPS fix…). Treated as unsafe.
-    case unknown
-
-    var allowsVideo: Bool {
-        self == .notConnected || self == .parked
-    }
-
-    var title: String {
-        switch self {
-        case .notConnected: return "Not connected to CarPlay"
-        case .moving: return "Driving"
-        case .stopped: return "Stopped"
-        case .parked: return "Parked"
-        case .unknown: return "Parked status unknown"
-        }
-    }
-}
-
 /// Decides when video may play.
 ///
 /// There is no public API that reports the gear selector or parking brake, so DriveIn combines:
@@ -47,17 +21,20 @@ enum DrivingState: Equatable {
 final class DrivingStateMonitor: NSObject {
     static let shared = DrivingStateMonitor()
 
-    /// ≈ 5.4 km/h. At or above this the car is moving.
-    static let movingSpeed: CLLocationSpeed = 1.5
-    /// ≈ 2.2 km/h. At or below this the car is standing still.
-    static let stationarySpeed: CLLocationSpeed = 0.6
     /// GPS readings older than this are ignored.
     static let locationFreshness: TimeInterval = 8
 
-    private(set) var state: DrivingState = .notConnected
+    private var machine = ParkedStateMachine(parkedDelay: AppSettings.shared.parkedConfirmationDelay,
+                                             requireConfirmation: AppSettings.shared.requireParkedConfirmation)
+
+    var state: DrivingState {
+        machine.state
+    }
+
     /// The car has been still long enough; waiting for the driver to tap "I'm Parked".
-    private(set) var canConfirmParked = false
-    private(set) var stationarySince: Date?
+    var canConfirmParked: Bool {
+        machine.canConfirmParked
+    }
 
     // Raw signals, exposed for the diagnostics screen.
     private(set) var carPlayAudioConnected = false
@@ -69,7 +46,6 @@ final class DrivingStateMonitor: NSObject {
     private(set) var motionSaysStationary = false
     private(set) var latestMotionDate: Date?
 
-    private var userConfirmedParked = false
     private let locationManager = CLLocationManager()
     private let motionManager = CMMotionActivityManager()
     private var motionRunning = false
@@ -92,9 +68,7 @@ final class DrivingStateMonitor: NSObject {
 
     /// Seconds left before the car counts as parked (or before "I'm Parked" becomes available).
     var secondsUntilParkedAllowed: Int? {
-        guard state == .stopped, !canConfirmParked, let since = stationarySince else { return nil }
-        let remaining = AppSettings.shared.parkedConfirmationDelay - Date().timeIntervalSince(since)
-        return max(0, Int(remaining.rounded(.up)))
+        machine.secondsUntilParkedAllowed(now: Date())
     }
 
     /// Human-readable reasons DriveIn can't judge the parked state.
@@ -152,9 +126,9 @@ final class DrivingStateMonitor: NSObject {
 
     /// The driver says the car is parked. Only accepted after the car has been still long enough.
     func confirmParked() {
-        guard canConfirmParked else { return }
-        userConfirmedParked = true
-        evaluate()
+        if machine.confirmParked() {
+            evaluate()
+        }
     }
 
     func setCarPlaySceneConnected(_ connected: Bool) {
@@ -269,77 +243,27 @@ final class DrivingStateMonitor: NSObject {
 
         let now = Date()
         let settings = AppSettings.shared
-        var newState: DrivingState
-        var confirmable = false
-
-        if !isConnected {
-            newState = .notConnected
-            stationarySince = nil
-            userConfirmedParked = false
-        } else {
-            var speed: CLLocationSpeed?
-            if let date = latestLocationDate, now.timeIntervalSince(date) < Self.locationFreshness {
-                speed = latestSpeed
-            }
-            switch settings.drivingSimulation {
-            case .off: break
-            case .stopped: speed = 0
-            case .driving: speed = 15
-            }
-            // Activity updates arrive only when the activity changes, so the last one stays current.
-            let motionKnown = motionRunning && latestMotionDate != nil
-
-            var moving = vehicleLimitsKeyboard == true
-            if let speed = speed, speed >= Self.movingSpeed {
-                moving = true
-            }
-            if speed == nil, motionKnown, motionSaysAutomotive, !motionSaysStationary {
-                moving = true
-            }
-
-            let stationary: Bool
-            if let speed = speed {
-                stationary = speed <= Self.stationarySpeed
-            } else {
-                stationary = motionKnown && motionSaysStationary
-            }
-
-            if moving {
-                newState = .moving
-                stationarySince = nil
-                userConfirmedParked = false
-            } else if stationary {
-                let since = stationarySince ?? now
-                stationarySince = since
-                if now.timeIntervalSince(since) >= settings.parkedConfirmationDelay {
-                    if !settings.requireParkedConfirmation || userConfirmedParked {
-                        newState = .parked
-                    } else {
-                        newState = .stopped
-                        confirmable = true
-                    }
-                } else {
-                    newState = .stopped
-                }
-            } else if state == .parked {
-                // No new evidence of movement (GPS lost in a garage, speed jitter below
-                // the moving threshold): stay parked until something says otherwise.
-                newState = .parked
-            } else if speed == nil && !motionKnown {
-                newState = .unknown
-                stationarySince = nil
-            } else {
-                // Creeping between the stationary and moving thresholds.
-                newState = .stopped
-                stationarySince = nil
-            }
+        var speed: CLLocationSpeed?
+        if let date = latestLocationDate, now.timeIntervalSince(date) < Self.locationFreshness {
+            speed = latestSpeed
         }
-
-        let changed = newState != state || confirmable != canConfirmParked
-        state = newState
-        canConfirmParked = confirmable
+        switch settings.drivingSimulation {
+        case .off: break
+        case .stopped: speed = 0
+        case .driving: speed = 15
+        }
+        // Activity updates arrive only when the activity changes, so the last one stays current.
+        let signals = DrivingSignals(isConnected: isConnected,
+                                     speed: speed,
+                                     motionKnown: motionRunning && latestMotionDate != nil,
+                                     motionAutomotive: motionSaysAutomotive,
+                                     motionStationary: motionSaysStationary,
+                                     vehicleLimitsKeyboard: vehicleLimitsKeyboard)
+        machine.parkedDelay = settings.parkedConfirmationDelay
+        machine.requireConfirmation = settings.requireParkedConfirmation
+        let changed = machine.update(signals, now: now)
         // While stopped, post every tick so countdowns in the UI stay current.
-        if changed || newState == .stopped {
+        if changed || machine.state == .stopped {
             NotificationCenter.default.post(name: .drivingStateDidChange, object: self)
         }
     }
