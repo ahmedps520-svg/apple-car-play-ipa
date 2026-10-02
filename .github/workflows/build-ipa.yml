@@ -32,7 +32,7 @@ jobs:
     runs-on: xcode-27
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Toolchain
         run: |
@@ -67,6 +67,11 @@ jobs:
             | tee build/xcodebuild-device.log \
             | xcbeautify --renderer github-actions
 
+      - name: Compiler warnings
+        run: |
+          grep -E "(warning|error): " build/xcodebuild-device.log | sed -E 's#^.*/DriveIn/##' | sort -u | head -200 || true
+          echo "Total unique warnings: $(grep -E 'warning: ' build/xcodebuild-device.log | sort -u | wc -l)"
+
       - name: Package IPAs
         run: |
           APP=build/DerivedData/Build/Products/Release-iphoneos/DriveIn.app
@@ -78,14 +83,14 @@ jobs:
           ls -la dist dist/extras
 
       - name: Upload DriveIn.ipa
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: DriveIn-ipa
           path: dist/DriveIn.ipa
           if-no-files-found: error
 
       - name: Upload entitled variants
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: DriveIn-extras
           path: dist/extras/*.ipa
@@ -93,7 +98,7 @@ jobs:
 
       - name: Upload build log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: xcodebuild-device-log
           path: build/xcodebuild-device.log
@@ -107,7 +112,7 @@ jobs:
       matrix:
         variant: [CarPlayVideo, CarPlayBrowser]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -141,7 +146,7 @@ jobs:
           ditto -c -k --keepParent "$APP" "dist/DriveIn-Simulator-${{ matrix.variant }}.app.zip"
 
       - name: Upload Simulator app
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: DriveIn-simulator-${{ matrix.variant }}
           path: dist/*.app.zip
@@ -149,7 +154,7 @@ jobs:
 
       - name: Upload build log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: xcodebuild-simulator-${{ matrix.variant }}-log
           path: build/xcodebuild-simulator.log
@@ -162,7 +167,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: artifacts
 
@@ -173,7 +178,7 @@ jobs:
           ls -la release
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('build-{0}', github.run_number) }}
           name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('DriveIn build {0}', github.run_number) }}

@@ -125,16 +125,17 @@ enum WebScripts {
         if (!url) { return null; }
         try { return new URL(url, document.baseURI).href; } catch (e) { return null; }
       }
-      var results = [];
-      var seen = {};
+      function clean(text) { return (text || '').replace(/\s+/g, ' ').trim(); }
+      var byKey = {};
+      var order = [];
       var here = location.href.split('#')[0];
       var anchors = document.querySelectorAll('a[href]');
-      for (var i = 0; i < anchors.length && results.length < 150; i++) {
+      for (var i = 0; i < anchors.length && order.length < 150; i++) {
         var a = anchors[i];
         var href = absolute(a.getAttribute('href'));
         if (!href || !/^https?:/i.test(href)) { continue; }
         var key = href.split('#')[0];
-        if (key === here || seen[key]) { continue; }
+        if (key === here) { continue; }
         var rect = a.getBoundingClientRect();
         if (rect.width < 1 || rect.height < 1) { continue; }
         var img = a.querySelector('img');
@@ -143,11 +144,28 @@ enum WebScripts {
           thumb = img.currentSrc || img.src || img.getAttribute('data-src') || img.getAttribute('data-thumb') || null;
           if (thumb && thumb.indexOf('data:') === 0) { thumb = img.getAttribute('data-src') || img.getAttribute('data-thumb') || null; }
         }
-        var text = a.getAttribute('aria-label') || a.getAttribute('title') || a.innerText || (img && img.getAttribute('alt')) || '';
-        text = text.replace(/\s+/g, ' ').trim();
-        if (text.length < 2) { continue; }
-        seen[key] = true;
-        results.push({ title: text.slice(0, 140), url: href, thumb: absolute(thumb) });
+        // Prefer real link text; fall back to the image's alt text.
+        var text = clean(a.getAttribute('aria-label') || a.getAttribute('title') || a.innerText);
+        var quality = text.length >= 2 ? 2 : 0;
+        if (!quality && img) {
+          text = clean(img.getAttribute('alt'));
+          quality = text.length >= 2 ? 1 : 0;
+        }
+        var existing = byKey[key];
+        if (existing) {
+          // Thumbnail and title are often separate links to the same page: merge them.
+          if (quality > existing.quality) { existing.title = text.slice(0, 140); existing.quality = quality; }
+          if (!existing.thumb && thumb) { existing.thumb = absolute(thumb); }
+          continue;
+        }
+        if (!quality && !thumb) { continue; }
+        byKey[key] = { title: text.slice(0, 140), url: href, thumb: absolute(thumb), quality: quality };
+        order.push(key);
+      }
+      var results = [];
+      for (var j = 0; j < order.length; j++) {
+        var entry = byKey[order[j]];
+        if (entry.quality > 0) { results.push({ title: entry.title, url: entry.url, thumb: entry.thumb }); }
       }
       return JSON.stringify({ title: document.title || '', links: results });
     })();

@@ -20,6 +20,8 @@ final class CarPlayTemplateBrowser: NSObject {
     private var searchText = ""
     private var observers: [NSObjectProtocol] = []
     private var refreshScheduled = false
+    private var browseSignature = ""
+    private var videosSignature = ""
     private var loadingThumbnails = Set<URL>()
     private lazy var canUseNowPlaying: Bool = {
         // CPNowPlayingTemplate needs the audio entitlement. Without a profile (Simulator) trust the build.
@@ -84,10 +86,51 @@ final class CarPlayTemplateBrowser: NSObject {
         }
     }
 
+    /// Rebuilds a tab only when what it shows changed (the driving monitor ticks every
+    /// second while stopped, and pages report progress constantly).
     private func refreshAll() {
         refreshScheduled = false
-        refreshBrowse()
-        refreshVideos()
+        let browse = currentBrowseSignature()
+        if browse != browseSignature {
+            browseSignature = browse
+            refreshBrowse()
+        }
+        let videos = currentVideosSignature()
+        if videos != videosSignature {
+            videosSignature = videos
+            refreshVideos()
+        }
+    }
+
+    private func isCached(_ url: URL?) -> Bool {
+        url.map { ImageLoader.shared.cachedImage(for: $0) != nil } ?? false
+    }
+
+    private func currentBrowseSignature() -> String {
+        let library = LibraryStore.shared
+        let current = tab.currentURL
+        return [
+            current?.absoluteString ?? "",
+            tab.title,
+            String(isCached(current.flatMap(MediaItem.youTubeThumbnailURL(for:)))),
+            library.bookmarks.map { $0.urlString + $0.title }.joined(separator: ","),
+            library.history.prefix(8).map { $0.urlString }.joined(separator: ","),
+            String(CPListTemplate.maximumItemCount),
+        ].joined(separator: "|")
+    }
+
+    private func currentVideosSignature() -> String {
+        let monitor = DrivingStateMonitor.shared
+        let playback = PlaybackController.shared
+        return [
+            MediaCatalog.shared.items.map { "\($0.id)#\($0.title)#\(isCached($0.posterURL))" }.joined(separator: ","),
+            playback.currentItem?.id ?? "",
+            String(playback.isPlaying),
+            String(monitor.state.allowsVideo),
+            String(monitor.canConfirmParked),
+            String(describing: session.supportsVideoPlayback),
+            String(CPListTemplate.maximumItemCount),
+        ].joined(separator: "|")
     }
 
     private func refreshBrowse() {

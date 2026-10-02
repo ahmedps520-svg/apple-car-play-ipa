@@ -16,6 +16,7 @@ final class CarWebViewController: UIViewController {
     private var lastPanTranslation: CGPoint = .zero
     private var momentumLink: CADisplayLink?
     private var momentumVelocity: CGPoint = .zero
+    private var lastGateAllowed: Bool?
 
     override func loadView() {
         view = UIView()
@@ -95,10 +96,11 @@ final class CarWebViewController: UIViewController {
                               audioContinues: AppSettings.shared.audioContinuesWhileDriving,
                               missingPermissions: missingPermissions)
         browserTab.setMediaSuspended(!allowed && !AppSettings.shared.audioContinuesWhileDriving)
-        if !allowed {
+        if !allowed && lastGateAllowed != false {
             setTheater(false)
             stopMomentum()
         }
+        lastGateAllowed = allowed
     }
 
     // MARK: - Cursor and clicks
