@@ -21,7 +21,8 @@ It ships as an unsigned **`DriveIn.ipa`** built by GitHub Actions, which you ins
 > - **AirPlay "video in car"**: video on the car display, if your car supports Apple's
 >   iOS 26+ feature (only when parked; needs no entitlement);
 > - a **Live Activity on the CarPlay Dashboard** (iOS 26+) that shows whether video is
->   allowed, with **I'm Parked** and play/pause buttons;
+>   allowed and what's playing. Its **I'm Parked** and play/pause buttons work on the iPhone
+>   Lock Screen; Apple doesn't say whether the car screen passes taps to Live Activities;
 > - sound plus playback controls in CarPlay's built-in **Now Playing** screen;
 > - an experimental slideshow of video frames in that Now Playing screen.
 >
@@ -101,7 +102,7 @@ SideStore are all affected. The reported workaround is to sign with a different 
 | Car's own driving signal | `CPSessionConfiguration.limitedUserInterfaces` (the car limits the keyboard while moving) | ✅ Official | a CarPlay entitlement | ❌ |
 | **Video on the car screen via AirPlay "video in car"** | DriveIn's `AVPlayer` with external playback; pick the car in the AirPlay menu | ✅ Official (iOS 26+) | the car must support it (automaker update); parked only | ✅ **if your car supports it** |
 | Sound + controls in CarPlay | `MPNowPlayingInfoCenter`, `MPRemoteCommandCenter`; shows in CarPlay's built-in Now Playing app | ✅ Official | none | ✅ Works |
-| Status + "I'm Parked" / play-pause buttons on the CarPlay Dashboard | Live Activity (ActivityKit + WidgetKit, `.supplementalActivityFamilies([.small])`, `LiveActivityIntent` buttons). Apple: "Your app does not need to be a CarPlay app to support widgets and Live Activities in CarPlay" | ✅ Official (iOS 26+) | none. iOS only lets the app *start* it while DriveIn is open on the iPhone, so open DriveIn once after connecting | ✅ Works |
+| Parked status and current video on the CarPlay Dashboard | Live Activity (ActivityKit + WidgetKit, `.supplementalActivityFamilies([.small])`). Apple: "Your app does not need to be a CarPlay app to support widgets and Live Activities in CarPlay". Its "I'm Parked" and play/pause buttons (`LiveActivityIntent`) work on the Lock Screen; Apple documents touch for CarPlay *widgets* only, so in the car they may be display-only | ✅ Official (iOS 26+) | none. iOS only lets the app *start* it while DriveIn is open on the iPhone, so open DriveIn once after connecting | ✅ Works |
 | Video frames in CarPlay Now Playing | about 1 frame/s copied into the Now Playing artwork | ⚠️ Workaround: public API, unintended use | none | ✅ Experimental, off by default |
 | **DriveIn icon + browsing UI on the CarPlay screen** (lists with thumbnails, search keyboard, details header, video playback) | CarPlay templates plus the iOS 26.4/27 video APIs: `CPPlaybackConfiguration`, `CPThumbnailImage`, `CPListTemplateDetailsHeader`, `CPSessionConfiguration.supportsVideoPlayback`, Search template for video apps (iOS 27) | ✅ Official (iOS 27 **CarPlay video app** category) | `com.apple.developer.carplay-video` (+ `-audio`), paid account, **Apple approval**, and a car that supports video in car | ❌ Can't be signed |
 | **A real web page drawn on the CarPlay screen** | `WKWebView` inside the `CPWindow` that CarPlay gives navigation apps; touch via map pan/zoom callbacks | ⚠️ Workaround that **violates the CarPlay guidelines** ("the base view must be used exclusively to draw a map") | `com.apple.developer.carplay-maps`, paid account, Apple approval (not granted for this use) | ❌ Can't be signed |

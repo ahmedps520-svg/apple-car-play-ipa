@@ -4,8 +4,9 @@ import UIKit
 
 /// Shows DriveIn's parked state (and the current video) as a Live Activity while the iPhone is
 /// connected to CarPlay. iOS 26+ puts Live Activities on the CarPlay Dashboard, so this is
-/// DriveIn's one interactive surface on the car screen that needs no CarPlay entitlement:
-/// "I'm Parked" and play/pause work from there.
+/// DriveIn's one surface on the car screen that needs no CarPlay entitlement. Its "I'm Parked"
+/// and play/pause buttons work on the Lock Screen; Apple doesn't document whether CarPlay
+/// passes taps to Live Activities.
 ///
 /// iOS only lets an app *start* a Live Activity while it is in the foreground, so it starts when
 /// DriveIn is open on the iPhone while connected; updates and ending work from the background.

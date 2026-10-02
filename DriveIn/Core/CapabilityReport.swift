@@ -213,7 +213,7 @@ struct CapabilityReport {
                        status: .unavailable)
         }
         return Row(title: title,
-                   detail: "iOS 26+ shows DriveIn's status with I'm Parked and play/pause on the CarPlay Dashboard. No entitlement needed. Open DriveIn once after connecting to start it.",
+                   detail: "iOS 26+ shows DriveIn's parked status on the CarPlay Dashboard. No entitlement needed. Open DriveIn once after connecting to start it.",
                    status: .available)
     }
 
