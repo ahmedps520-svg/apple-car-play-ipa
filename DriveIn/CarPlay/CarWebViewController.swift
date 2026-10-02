@@ -5,7 +5,7 @@ import WebKit
 /// web page on the car display. CarPlay never delivers taps to this window, so interaction comes
 /// from `CarPlayWindowBrowser` (map buttons, pan/zoom gesture callbacks) via a cursor.
 final class CarWebViewController: UIViewController {
-    let tab = BrowserTab(surface: .car)
+    let browserTab = BrowserTab(surface: .car)
     /// Called when a click focused a text field; the argument is the field's current text.
     var onEditableFieldFocused: ((String) -> Void)?
 
@@ -24,7 +24,7 @@ final class CarWebViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        let webView = tab.webView!
+        let webView = browserTab.webView!
         webView.translatesAutoresizingMaskIntoConstraints = false
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.isOpaque = true
@@ -77,9 +77,9 @@ final class CarWebViewController: UIViewController {
 
     func loadInitialPage() {
         if let url = BrowserTab.main.currentURL {
-            tab.load(url)
+            browserTab.load(url)
         } else {
-            tab.showStartPage()
+            browserTab.showStartPage()
         }
     }
 
@@ -94,7 +94,7 @@ final class CarWebViewController: UIViewController {
                               secondsRemaining: secondsRemaining,
                               audioContinues: AppSettings.shared.audioContinuesWhileDriving,
                               missingPermissions: missingPermissions)
-        tab.setMediaSuspended(!allowed && !AppSettings.shared.audioContinuesWhileDriving)
+        browserTab.setMediaSuspended(!allowed && !AppSettings.shared.audioContinuesWhileDriving)
         if !allowed {
             setTheater(false)
             stopMomentum()
@@ -104,7 +104,7 @@ final class CarWebViewController: UIViewController {
     // MARK: - Cursor and clicks
 
     private var webFrame: CGRect {
-        tab.webView.frame
+        browserTab.webView.frame
     }
 
     func moveCursor(to point: CGPoint) {
@@ -131,7 +131,7 @@ final class CarWebViewController: UIViewController {
     func click() {
         guard let point = cursorPoint, let fraction = webFraction(for: point) else { return }
         cursor.pulse()
-        tab.callCarHelper("clickAt", [Double(fraction.x), Double(fraction.y)]) { [weak self] result in
+        browserTab.callCarHelper("clickAt", [Double(fraction.x), Double(fraction.y)]) { [weak self] result in
             guard let json = result as? String,
                   let data = json.data(using: .utf8),
                   let info = (try? JSONSerialization.jsonObject(with: data, options: [])) as? [String: Any]
@@ -143,11 +143,11 @@ final class CarWebViewController: UIViewController {
     }
 
     func typeText(_ text: String, submit: Bool) {
-        tab.callCarHelper("typeText", [text, submit])
+        browserTab.callCarHelper("typeText", [text, submit])
     }
 
     func togglePlayPause() {
-        tab.callCarHelper("togglePlay", []) { [weak self] result in
+        browserTab.callCarHelper("togglePlay", []) { [weak self] result in
             switch result as? String {
             case "playing": self?.showToast("Playing")
             case "paused": self?.showToast("Paused")
@@ -157,7 +157,7 @@ final class CarWebViewController: UIViewController {
     }
 
     func setTheater(_ on: Bool) {
-        tab.callCarHelper("theater", [on]) { [weak self] result in
+        browserTab.callCarHelper("theater", [on]) { [weak self] result in
             if on, result as? String == "none" {
                 self?.showToast("No video on this page")
             }
@@ -165,8 +165,8 @@ final class CarWebViewController: UIViewController {
     }
 
     var pageZoom: CGFloat {
-        get { tab.webView.pageZoom }
-        set { tab.webView.pageZoom = min(max(newValue, 0.5), 2.0) }
+        get { browserTab.webView.pageZoom }
+        set { browserTab.webView.pageZoom = min(max(newValue, 0.5), 2.0) }
     }
 
     // MARK: - Scrolling (pan gestures from the map template)
@@ -188,7 +188,7 @@ final class CarWebViewController: UIViewController {
     }
 
     func scroll(by delta: CGPoint) {
-        let scrollView = tab.webView.scrollView
+        let scrollView = browserTab.webView.scrollView
         let inset = scrollView.adjustedContentInset
         let minOffset = CGPoint(x: -inset.left, y: -inset.top)
         let maxOffset = CGPoint(x: max(minOffset.x, scrollView.contentSize.width - scrollView.bounds.width + inset.right),
@@ -202,7 +202,7 @@ final class CarWebViewController: UIViewController {
         // Feeds and carousels often scroll inside their own element, not the page.
         let remaining = CGPoint(x: delta.x - (target.x - current.x), y: delta.y - (target.y - current.y))
         if abs(remaining.x) > 1 || abs(remaining.y) > 1, let point = cursorPoint, let fraction = webFraction(for: point) {
-            tab.callCarHelper("scrollAt", [Double(fraction.x), Double(fraction.y), Double(remaining.x), Double(remaining.y)])
+            browserTab.callCarHelper("scrollAt", [Double(fraction.x), Double(fraction.y), Double(remaining.x), Double(remaining.y)])
         }
     }
 

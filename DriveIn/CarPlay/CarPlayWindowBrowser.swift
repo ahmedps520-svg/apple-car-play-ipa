@@ -65,7 +65,7 @@ final class CarPlayWindowBrowser: NSObject {
     func stop() {
         observers.forEach { NotificationCenter.default.removeObserver($0) }
         observers.removeAll()
-        webController.tab.pauseAllMedia()
+        webController.browserTab.pauseAllMedia()
         window.rootViewController = nil
     }
 
@@ -77,10 +77,10 @@ final class CarPlayWindowBrowser: NSObject {
         mapTemplate.hidesButtonsWithNavigationBar = false
 
         let back = CPBarButton(image: CarPlayImages.symbol("chevron.backward")) { [weak self] _ in
-            self?.webController.tab.goBack()
+            self?.webController.browserTab.goBack()
         }
         let reload = CPBarButton(image: CarPlayImages.symbol("arrow.clockwise")) { [weak self] _ in
-            self?.webController.tab.reload()
+            self?.webController.browserTab.reload()
         }
         let search = CPBarButton(image: CarPlayImages.symbol("magnifyingglass")) { [weak self] _ in
             self?.presentKeyboard(.address)
@@ -207,14 +207,14 @@ final class CarPlayWindowBrowser: NSObject {
         item.handler = { [weak self] _, completion in
             completion()
             self?.interfaceController.popToRootTemplate(animated: true, completion: nil)
-            self?.webController.tab.load(url)
+            self?.webController.browserTab.load(url)
         }
         return item
     }
 
     private func load(_ url: URL) {
         interfaceController.popToRootTemplate(animated: true, completion: nil)
-        webController.tab.load(url)
+        webController.browserTab.load(url)
     }
 }
 

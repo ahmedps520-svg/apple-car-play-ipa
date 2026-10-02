@@ -4,12 +4,12 @@ import UIKit
 final class PageMediaViewController: UITableViewController {
     var onPlay: ((MediaItem) -> Void)?
 
-    private let tab: BrowserTab
+    private let browserTab: BrowserTab
     private var pageItems: [MediaItem] = []
     private var recentItems: [MediaItem] = []
 
     init(tab: BrowserTab) {
-        self.tab = tab
+        self.browserTab = tab
         super.init(style: .insetGrouped)
     }
 
@@ -24,17 +24,17 @@ final class PageMediaViewController: UITableViewController {
             self?.dismiss(animated: true)
         })
         navigationItem.rightBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "arrow.clockwise"), primaryAction: UIAction { [weak self] _ in
-            self?.tab.rescanMedia()
+            self?.browserTab.rescanMedia()
         })
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
         let center = NotificationCenter.default
-        center.addObserver(self, selector: #selector(reload), name: .browserTabDidChange, object: tab)
-        center.addObserver(self, selector: #selector(reload), name: .mediaCatalogDidChange, object: nil)
-        reload()
+        center.addObserver(self, selector: #selector(reloadMediaList), name: .browserTabDidChange, object: browserTab)
+        center.addObserver(self, selector: #selector(reloadMediaList), name: .mediaCatalogDidChange, object: nil)
+        reloadMediaList()
     }
 
-    @objc private func reload() {
-        pageItems = tab.pageMedia
+    @objc private func reloadMediaList() {
+        pageItems = browserTab.pageMedia
         let pageIDs = Set(pageItems.map { $0.id })
         recentItems = MediaCatalog.shared.items.filter { !pageIDs.contains($0.id) }
         tableView.reloadData()

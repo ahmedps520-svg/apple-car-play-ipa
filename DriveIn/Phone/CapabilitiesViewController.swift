@@ -15,12 +15,12 @@ final class CapabilitiesViewController: UITableViewController {
         }
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
         let center = NotificationCenter.default
-        center.addObserver(self, selector: #selector(reload), name: .drivingStateDidChange, object: nil)
-        center.addObserver(self, selector: #selector(reload), name: .carPlaySessionDidChange, object: nil)
-        center.addObserver(self, selector: #selector(reload), name: UIApplication.didBecomeActiveNotification, object: nil)
+        center.addObserver(self, selector: #selector(reloadReport), name: .drivingStateDidChange, object: nil)
+        center.addObserver(self, selector: #selector(reloadReport), name: .carPlaySessionDidChange, object: nil)
+        center.addObserver(self, selector: #selector(reloadReport), name: UIApplication.didBecomeActiveNotification, object: nil)
     }
 
-    @objc private func reload() {
+    @objc private func reloadReport() {
         report = CapabilityReport.current()
         tableView.reloadData()
     }

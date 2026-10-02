@@ -47,11 +47,11 @@ final class SettingsViewController: UITableViewController {
         })
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
         let center = NotificationCenter.default
-        center.addObserver(self, selector: #selector(reload), name: .settingsDidChange, object: nil)
-        center.addObserver(self, selector: #selector(reload), name: UIApplication.didBecomeActiveNotification, object: nil)
+        center.addObserver(self, selector: #selector(reloadSettings), name: .settingsDidChange, object: nil)
+        center.addObserver(self, selector: #selector(reloadSettings), name: UIApplication.didBecomeActiveNotification, object: nil)
     }
 
-    @objc private func reload() {
+    @objc private func reloadSettings() {
         tableView.reloadData()
     }
 

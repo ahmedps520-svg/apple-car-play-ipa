@@ -33,12 +33,12 @@ final class PlayerViewController: AVPlayerViewController {
         }
 
         let center = NotificationCenter.default
-        center.addObserver(self, selector: #selector(refresh), name: .drivingStateDidChange, object: nil)
-        center.addObserver(self, selector: #selector(refresh), name: .playbackStateDidChange, object: nil)
-        refresh()
+        center.addObserver(self, selector: #selector(refreshGateOverlay), name: .drivingStateDidChange, object: nil)
+        center.addObserver(self, selector: #selector(refreshGateOverlay), name: .playbackStateDidChange, object: nil)
+        refreshGateOverlay()
     }
 
-    @objc private func refresh() {
+    @objc private func refreshGateOverlay() {
         let monitor = DrivingStateMonitor.shared
         let blocked = PlaybackController.shared.isVideoBlocked
         gateOverlay.isHidden = !blocked

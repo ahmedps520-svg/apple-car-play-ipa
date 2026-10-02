@@ -9,12 +9,12 @@ final class LibraryViewController: UITableViewController {
         case history
     }
 
-    private let tab: BrowserTab
+    private let browserTab: BrowserTab
     private let segmented = UISegmentedControl(items: ["Bookmarks", "History"])
     private var mode: Mode = .bookmarks
 
     init(tab: BrowserTab) {
-        self.tab = tab
+        self.browserTab = tab
         super.init(style: .insetGrouped)
     }
 
@@ -46,14 +46,14 @@ final class LibraryViewController: UITableViewController {
     private func refresh() {
         switch mode {
         case .bookmarks:
-            let current = tab.currentURL
+            let current = browserTab.currentURL
             let isBookmarked = LibraryStore.shared.isBookmarked(current)
             let toggle = UIBarButtonItem(image: UIImage(systemName: isBookmarked ? "bookmark.fill" : "bookmark"), primaryAction: UIAction { [weak self] _ in
-                guard let self = self, let url = self.tab.currentURL else { return }
+                guard let self = self, let url = self.browserTab.currentURL else { return }
                 if LibraryStore.shared.isBookmarked(url) {
                     LibraryStore.shared.removeBookmark(url: url)
                 } else {
-                    LibraryStore.shared.addBookmark(title: self.tab.title, url: url)
+                    LibraryStore.shared.addBookmark(title: self.browserTab.title, url: url)
                 }
                 self.refresh()
             })

@@ -4,7 +4,7 @@ import WebKit
 
 /// The iPhone browser.
 final class BrowserViewController: UIViewController {
-    private let tab: BrowserTab
+    private let browserTab: BrowserTab
 
     private let topBar = UIView()
     private let addressField = UITextField()
@@ -21,7 +21,7 @@ final class BrowserViewController: UIViewController {
     private var bookmarkItem: UIBarButtonItem!
 
     init(tab: BrowserTab) {
-        self.tab = tab
+        self.browserTab = tab
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -38,13 +38,13 @@ final class BrowserViewController: UIViewController {
         layout()
 
         let center = NotificationCenter.default
-        center.addObserver(self, selector: #selector(tabChanged), name: .browserTabDidChange, object: tab)
+        center.addObserver(self, selector: #selector(tabChanged), name: .browserTabDidChange, object: browserTab)
         center.addObserver(self, selector: #selector(drivingStateChanged), name: .drivingStateDidChange, object: nil)
         center.addObserver(self, selector: #selector(drivingStateChanged), name: .settingsDidChange, object: nil)
         center.addObserver(self, selector: #selector(libraryChanged), name: .libraryDidChange, object: nil)
 
-        if tab.webView.url == nil {
-            tab.showStartPage()
+        if browserTab.webView.url == nil {
+            browserTab.showStartPage()
         }
         refreshNavigation()
         refreshGate()
@@ -60,7 +60,7 @@ final class BrowserViewController: UIViewController {
 
     /// Opens a URL from elsewhere (CarPlay, the library…).
     func open(_ url: URL) {
-        tab.load(url)
+        browserTab.load(url)
     }
 
     // MARK: - Building
@@ -118,7 +118,7 @@ final class BrowserViewController: UIViewController {
         webContainer.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(webContainer)
 
-        let webView = tab.webView!
+        let webView = browserTab.webView!
         webView.translatesAutoresizingMaskIntoConstraints = false
         webContainer.addSubview(webView)
         NSLayoutConstraint.activate([
@@ -145,10 +145,10 @@ final class BrowserViewController: UIViewController {
         view.addSubview(toolbar)
 
         backItem = UIBarButtonItem(image: UIImage(systemName: "chevron.backward"), primaryAction: UIAction { [weak self] _ in
-            self?.tab.goBack()
+            self?.browserTab.goBack()
         })
         forwardItem = UIBarButtonItem(image: UIImage(systemName: "chevron.forward"), primaryAction: UIAction { [weak self] _ in
-            self?.tab.goForward()
+            self?.browserTab.goForward()
         })
         videosItem = UIBarButtonItem(image: UIImage(systemName: "play.rectangle.on.rectangle"), primaryAction: UIAction { [weak self] _ in
             self?.showPageMedia()
@@ -225,20 +225,20 @@ final class BrowserViewController: UIViewController {
     }
 
     private func refreshNavigation() {
-        let webView = tab.webView!
+        let webView = browserTab.webView!
         if !addressField.isFirstResponder {
-            addressField.text = AddressParser.displayString(for: tab.currentURL)
+            addressField.text = AddressParser.displayString(for: browserTab.currentURL)
         }
         reloadButton.setImage(UIImage(systemName: webView.isLoading ? "xmark" : "arrow.clockwise"), for: .normal)
         progressView.setProgress(Float(webView.estimatedProgress), animated: webView.isLoading)
         progressView.isHidden = !webView.isLoading
-        backItem.isEnabled = webView.canGoBack || !tab.isShowingStartPage
+        backItem.isEnabled = webView.canGoBack || !browserTab.isShowingStartPage
         forwardItem.isEnabled = webView.canGoForward
 
-        let playable = tab.playableMedia.count
+        let playable = browserTab.playableMedia.count
         videosItem.image = UIImage(systemName: playable > 0 ? "play.rectangle.on.rectangle.fill" : "play.rectangle.on.rectangle")
         videosItem.tintColor = playable > 0 ? .systemOrange : nil
-        bookmarkItem.image = UIImage(systemName: LibraryStore.shared.isBookmarked(tab.currentURL) ? "book.fill" : "book")
+        bookmarkItem.image = UIImage(systemName: LibraryStore.shared.isBookmarked(browserTab.currentURL) ? "book.fill" : "book")
     }
 
     private func refreshGate() {
@@ -253,7 +253,7 @@ final class BrowserViewController: UIViewController {
                               audioContinues: audioContinues,
                               missingPermissions: monitor.missingPermissions)
         // The overlay hides the picture; suspend media too unless sound should continue.
-        tab.setMediaSuspended(!state.allowsVideo && !audioContinues)
+        browserTab.setMediaSuspended(!state.allowsVideo && !audioContinues)
         if !state.allowsVideo {
             addressField.resignFirstResponder()
         }
@@ -287,15 +287,15 @@ final class BrowserViewController: UIViewController {
     // MARK: - Actions
 
     private func reloadOrStop() {
-        if tab.webView.isLoading {
-            tab.stopLoading()
+        if browserTab.webView.isLoading {
+            browserTab.stopLoading()
         } else {
-            tab.reload()
+            browserTab.reload()
         }
     }
 
     private func showPageMedia() {
-        let controller = PageMediaViewController(tab: tab)
+        let controller = PageMediaViewController(tab: browserTab)
         controller.onPlay = { [weak self] item in
             self?.dismiss(animated: true) {
                 self?.presentPlayer(for: item)
@@ -312,10 +312,10 @@ final class BrowserViewController: UIViewController {
     }
 
     private func showLibrary() {
-        let controller = LibraryViewController(tab: tab)
+        let controller = LibraryViewController(tab: browserTab)
         controller.onOpen = { [weak self] url in
             self?.dismiss(animated: true)
-            self?.tab.load(url)
+            self?.browserTab.load(url)
         }
         presentSheet(controller)
     }
@@ -356,21 +356,21 @@ final class BrowserViewController: UIViewController {
 
 extension BrowserViewController: UITextFieldDelegate {
     func textFieldDidBeginEditing(_ textField: UITextField) {
-        textField.text = tab.currentURL?.absoluteString
+        textField.text = browserTab.currentURL?.absoluteString
         DispatchQueue.main.async {
             textField.selectAll(nil)
         }
     }
 
     func textFieldDidEndEditing(_ textField: UITextField) {
-        textField.text = AddressParser.displayString(for: tab.currentURL)
+        textField.text = AddressParser.displayString(for: browserTab.currentURL)
     }
 
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         let text = textField.text ?? ""
         textField.resignFirstResponder()
-        if tab.load(input: text) {
-            textField.text = AddressParser.displayString(for: tab.currentURL)
+        if browserTab.load(input: text) {
+            textField.text = AddressParser.displayString(for: browserTab.currentURL)
         }
         return true
     }
