@@ -27,7 +27,7 @@ final class SettingsViewController: UITableViewController {
 
     private let sections: [Section] = [
         Section(title: "Parked-only video",
-                footer: "While your iPhone is connected to CarPlay (wired or wireless), video plays only when DriveIn believes the car is parked: it must stand still for the set time and, if required, you confirm with “I'm Parked”. Cars that support AirPlay or CarPlay video also enforce this themselves.",
+                footer: "While your iPhone is connected to CarPlay (wired or wireless), video plays only when DriveIn believes the car is parked: it must stand still for the set time and, if required, you confirm with “I'm Parked”. Cars that support AirPlay or CarPlay video also enforce this themselves. Simulate CarPlay is for testing at home and is ignored while a real car is connected.",
                 rows: [.requireConfirmation, .parkedDelay, .audioContinues, .simulation]),
         Section(title: "Browser",
                 footer: "Car-compatible video hides Media Source Extensions from websites so they fall back to plain HLS/MP4 streams, as they do for older iPhones. Those streams can be played by DriveIn's player, AirPlayed to the car and shown in CarPlay. Quality may be lower; DRM sites (Netflix, Disney+) still only play inside the page.",

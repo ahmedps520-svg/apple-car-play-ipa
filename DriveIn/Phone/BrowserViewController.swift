@@ -20,6 +20,7 @@ final class BrowserViewController: UIViewController {
     private var forwardItem: UIBarButtonItem!
     private var videosItem: UIBarButtonItem!
     private var bookmarkItem: UIBarButtonItem!
+    private var lastGateAllowedVideo = true
 
     init(tab: BrowserTab) {
         self.browserTab = tab
@@ -264,7 +265,12 @@ final class BrowserViewController: UIViewController {
         browserTab.setMediaSuspended(!state.allowsVideo && !audioContinues)
         if !state.allowsVideo {
             addressField.resignFirstResponder()
+            if lastGateAllowedVideo {
+                // The native player has its own overlay; web PiP/fullscreen do not.
+                browserTab.closeMediaPresentations()
+            }
         }
+        lastGateAllowedVideo = state.allowsVideo
 
         if state == .notConnected {
             statusButton.superview?.isHidden = true
@@ -282,7 +288,7 @@ final class BrowserViewController: UIViewController {
             if let seconds = monitor.secondsUntilParkedAllowed {
                 title += " · \(seconds)s"
             }
-            if AppSettings.shared.drivingSimulation != .off {
+            if monitor.simulationActive {
                 title += " (simulated)"
             }
             configuration.title = title

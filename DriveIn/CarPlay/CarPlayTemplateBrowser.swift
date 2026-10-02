@@ -24,6 +24,15 @@ final class CarPlayTemplateBrowser: NSObject {
     private var videosSignature = ""
     private var loadingThumbnails = Set<URL>()
     private weak var parkingAlert: CPAlertTemplate?
+
+    /// Audio and video apps may use the Search template (the CarPlay keyboard) from iOS 27 on;
+    /// on earlier versions pushing it raises an exception.
+    private var keyboardAvailable: Bool {
+        if #available(iOS 27, *) {
+            return true
+        }
+        return false
+    }
     private lazy var canUseNowPlaying: Bool = {
         // CPNowPlayingTemplate needs the audio entitlement. Without a profile (Simulator) trust the build.
         ProvisioningInfo.load().map { $0.has(.audio) } ?? true
@@ -40,11 +49,13 @@ final class CarPlayTemplateBrowser: NSObject {
     func start() {
         browseTemplate.tabTitle = "Browse"
         browseTemplate.tabImage = UIImage(systemName: "globe")
-        browseTemplate.trailingNavigationBarButtons = [
-            CPBarButton(image: CarPlayImages.symbol("magnifyingglass")) { [weak self] _ in
-                self?.presentSearch()
-            },
-        ]
+        if keyboardAvailable {
+            browseTemplate.trailingNavigationBarButtons = [
+                CPBarButton(image: CarPlayImages.symbol("magnifyingglass")) { [weak self] _ in
+                    self?.presentSearch()
+                },
+            ]
+        }
         videosTemplate.tabTitle = "Videos"
         videosTemplate.tabImage = UIImage(systemName: "play.rectangle.on.rectangle")
         videosTemplate.emptyViewTitleVariants = ["No videos yet"]
@@ -139,11 +150,12 @@ final class CarPlayTemplateBrowser: NSObject {
     }
 
     private func refreshBrowse() {
-        var gridButtons: [CPGridButton] = [
-            CPGridButton(titleVariants: ["Go", "URL"], image: CarPlayImages.gridTile("magnifyingglass")) { [weak self] _ in
+        var gridButtons: [CPGridButton] = []
+        if keyboardAvailable {
+            gridButtons.append(CPGridButton(titleVariants: ["Go", "URL"], image: CarPlayImages.gridTile("magnifyingglass")) { [weak self] _ in
                 self?.presentSearch()
-            },
-        ]
+            })
+        }
         for bookmark in LibraryStore.shared.bookmarks {
             guard let url = bookmark.url else { continue }
             gridButtons.append(CPGridButton(titleVariants: [bookmark.title], image: CarPlayImages.gridTile(bookmark.symbol)) { [weak self] _ in
@@ -405,6 +417,7 @@ final class CarPlayTemplateBrowser: NSObject {
     // MARK: - Browsing
 
     private func presentSearch() {
+        guard keyboardAvailable else { return }
         searchText = ""
         let search = CPSearchTemplate()
         search.delegate = self
@@ -436,10 +449,12 @@ final class CarPlayTemplateBrowser: NSObject {
                 self.tab.reload()
                 self.fill(template)
             },
-            CPBarButton(image: CarPlayImages.symbol("magnifyingglass")) { [weak self] _ in
-                self?.presentSearch()
-            },
         ]
+        if keyboardAvailable {
+            template.trailingNavigationBarButtons.append(CPBarButton(image: CarPlayImages.symbol("magnifyingglass")) { [weak self] _ in
+                self?.presentSearch()
+            })
+        }
         interfaceController.pushRespectingDepth(template)
         fill(template)
     }

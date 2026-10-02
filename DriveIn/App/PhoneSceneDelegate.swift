@@ -47,8 +47,8 @@ final class PhoneSceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     /// - `drivein://open?url=youtube.com` opens a page (handy for Shortcuts).
-    /// - `drivein://simulate?state=driving|stopped|off` is a testing aid. It can only add
-    ///   restrictions or return to the real sensors; it can never unlock video.
+    /// - `drivein://simulate?state=driving|stopped|off` is a testing aid. It is ignored while
+    ///   a real car is connected, so it can never unlock video on the road.
     private func handleDriveInURL(_ url: URL) {
         var query: [String: String] = [:]
         for item in URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? [] {

@@ -125,9 +125,10 @@ DriveIn's CarPlay template UI (`DriveIn/CarPlay/CarPlayTemplateBrowser.swift`) f
 design:
 
 - **Browse** tab: quick-access buttons, the iPhone's current page, bookmarks, recent pages.
-- **Go** (Search template keyboard): type `youtube.com` or a search. The iPhone browser
-  loads the page, and its links and playable streams come back as list rows with thumbnails.
-  Video links load the page, pick up its stream and play it.
+- **Go** (Search template keyboard, iOS 27+): type `youtube.com` or a search. The iPhone
+  browser loads the page, and its links and playable streams come back as list rows with
+  thumbnails. Video links load the page, pick up its stream and play it. The car disables the
+  keyboard while driving.
 - **Videos** tab: every playable stream found while browsing, plus a details header with
   play/pause and ±15 s.
 - Playback goes through `AVPlayer`, with `preferredPresentation = .video` only when the car
@@ -163,7 +164,7 @@ already has that entitlement and accepts that it breaks the rules.
 
 No public iOS API reports the gear selector or the parking brake. Apple's own "video in car"
 gets that from the car, but apps can't. DriveIn combines these signals
-(`DriveIn/Core/DrivingStateMonitor.swift`):
+(`DriveIn/Core/DrivingStateMonitor.swift` gathers them, `ParkedStateMachine.swift` decides):
 
 1. **Connected to CarPlay?** Checked with the audio route `.carAudio` (wired and wireless, no
    entitlement) or a connected CarPlay scene. When not connected, there are no restrictions.
@@ -180,12 +181,12 @@ gets that from the car, but apps can't. DriveIn combines these signals
 While not parked, DriveIn covers the page and video. With **Keep sound while driving** on
 (the default, matching CarPlay's audio-only fallback) the sound keeps playing; with it off,
 playback pauses. Video never resumes by itself. To test at home, use **Settings ▸ Simulate
-CarPlay**.
+CarPlay** (ignored while a real car is connected).
 
 **URL scheme** (for iOS Shortcuts automations, e.g. "when CarPlay connects"):
 `drivein://open?url=youtube.com` opens a page.
-`drivein://simulate?state=driving|stopped|off` switches the test simulation. It can only add
-restrictions or go back to the real sensors; it never unlocks video.
+`drivein://simulate?state=driving|stopped|off` switches the test simulation. The simulation is
+ignored while a real car is connected, so it can't be used to unlock video on the road.
 
 ## 7. Building it yourself
 
@@ -212,12 +213,18 @@ open DriveIn.xcodeproj
   video apps "must be designed primarily to provide video playback services", so a general
   browser may not qualify.
 
+**Tests:** `swift test` (Linux or macOS) runs the unit tests for the parked-only state
+machine, URL parsing, media classification and the JavaScript bridge (`Package.swift`,
+`Tests/`). On every push CI also boots an iOS 27 simulator, launches DriveIn, simulates
+driving and stopping, and uploads screenshots (`DriveIn-screenshots` artifact). The injected
+page scripts were also exercised in headless Chromium during development.
+
 ```
 DriveIn/
   App/       AppDelegate, iPhone scene
   Browser/   BrowserTab (WKWebView), injected JavaScript, start page
   CarPlay/   scene delegate; CarPlayTemplateBrowser (official); CarPlayWindowBrowser + CarWebViewController (workaround)
-  Core/      DrivingStateMonitor (parked logic), settings, bookmarks, media models, capability report
+  Core/      ParkedStateMachine (parked rules) + DrivingStateMonitor (sensors), settings, bookmarks, media models, capability report
   Phone/     browser screen, videos list, library, settings, "What works" screen
   Player/    PlaybackController (AVPlayer, AirPlay, Now Playing), player screen, Now Playing frame mirror
 Config/      Info.plist and the three entitlement variants

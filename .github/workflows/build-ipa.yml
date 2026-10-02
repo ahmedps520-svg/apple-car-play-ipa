@@ -201,6 +201,7 @@ jobs:
                       sys.exit(0)
           sys.exit("no iPhone simulator found")
           ')
+          echo "$UDID" > sim/udid
           log "Booting simulator $UDID"
           limit 900 xcrun simctl bootstatus "$UDID" -b
           log "Installing DriveIn"
@@ -232,6 +233,27 @@ jobs:
             log "DriveIn is not running: it crashed or was killed."
             exit 1
           fi
+
+      - name: CarPlay display (experimental)
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          log() { echo "[$(date +%H:%M:%S)] $*"; }
+          limit() { local seconds=$1; shift; perl -e 'alarm shift; exec @ARGV' "$seconds" "$@"; }
+          UDID=$(cat sim/udid)
+          log "Opening Simulator.app for $UDID"
+          open -a Simulator --args -CurrentDeviceUDID "$UDID"
+          sleep 20
+          MENU='menu 1 of menu item "External Displays" of menu 1 of menu bar item "I/O" of menu bar 1'
+          log "External display menu items:"
+          limit 60 osascript -e "tell application \"System Events\" to tell process \"Simulator\" to get name of every menu item of $MENU" || true
+          log "Choosing CarPlay"
+          limit 60 osascript -e 'tell application "Simulator" to activate' -e 'delay 2' \
+            -e "tell application \"System Events\" to tell process \"Simulator\" to click (first menu item of $MENU whose name starts with \"CarPlay\")" || true
+          sleep 20
+          limit 60 xcrun simctl io "$UDID" screenshot --display=external shots/6-carplay-home.png || true
+          limit 60 osascript -e 'tell application "System Events" to tell process "Simulator" to get {name, position, size} of every window' || true
+          ls -la shots
 
       - name: Crash reports
         if: always()

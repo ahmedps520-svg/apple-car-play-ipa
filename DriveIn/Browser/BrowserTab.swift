@@ -112,6 +112,12 @@ final class BrowserTab: NSObject {
         webView.pauseAllMediaPlayback(completionHandler: nil)
     }
 
+    /// Ends Picture in Picture and fullscreen video, which would otherwise float above the
+    /// parked-only overlay.
+    func closeMediaPresentations() {
+        webView.closeAllMediaPresentations(completionHandler: nil)
+    }
+
     /// Calls back once the current navigation finished (true) or failed/timed out (false).
     func whenLoaded(timeout: TimeInterval, completion: @escaping (Bool) -> Void) {
         if !webView.isLoading && !navigationPending {

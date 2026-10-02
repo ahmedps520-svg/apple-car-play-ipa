@@ -54,8 +54,19 @@ final class DrivingStateMonitor: NSObject {
     private var timer: Timer?
     private var started = false
 
+    /// A real CarPlay connection (wired or wireless audio route, or a CarPlay scene).
+    var isReallyConnected: Bool {
+        carPlayAudioConnected || carPlaySceneConnected
+    }
+
+    /// The test simulation only applies away from a real car, so it can never be used to
+    /// fake "standing still" while actually driving.
+    var simulationActive: Bool {
+        !isReallyConnected && AppSettings.shared.drivingSimulation != .off
+    }
+
     var isConnected: Bool {
-        carPlayAudioConnected || carPlaySceneConnected || AppSettings.shared.drivingSimulation != .off
+        isReallyConnected || simulationActive
     }
 
     var locationAuthorization: CLAuthorizationStatus {
@@ -247,10 +258,12 @@ final class DrivingStateMonitor: NSObject {
         if let date = latestLocationDate, now.timeIntervalSince(date) < Self.locationFreshness {
             speed = latestSpeed
         }
-        switch settings.drivingSimulation {
-        case .off: break
-        case .stopped: speed = 0
-        case .driving: speed = 15
+        if simulationActive {
+            switch settings.drivingSimulation {
+            case .off: break
+            case .stopped: speed = 0
+            case .driving: speed = 15
+            }
         }
         // Activity updates arrive only when the activity changes, so the last one stays current.
         let signals = DrivingSignals(isConnected: isConnected,
