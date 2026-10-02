@@ -44,6 +44,8 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>DriveIn uses your speed while connected to CarPlay so that video only plays when your car is parked.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>NSMotionUsageDescription</key>
 	<string>DriveIn uses motion activity while connected to CarPlay to detect driving and pause video until you are parked.</string>
 	<key>UIApplicationSceneManifest</key>

@@ -31,6 +31,11 @@ cp -R "$APP" "$WORK/Payload/"
 APP_NAME="$(basename "$APP")"
 
 if [[ -n "$ENTITLEMENTS" ]]; then
+  # Nested code must be signed before the app that contains it.
+  for extension in "$WORK/Payload/$APP_NAME/PlugIns/"*.appex; do
+    [[ -e "$extension" ]] || continue
+    codesign --force --sign - --timestamp=none --generate-entitlement-der "$extension"
+  done
   codesign --force --sign - --timestamp=none --generate-entitlement-der \
     --entitlements "$ENTITLEMENTS" "$WORK/Payload/$APP_NAME"
   echo "Embedded entitlements:"

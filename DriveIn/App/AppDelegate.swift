@@ -13,6 +13,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: [])
         DrivingStateMonitor.shared.start()
         _ = PlaybackController.shared
+        LiveActivityController.shared.start()
         return true
     }
 }

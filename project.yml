@@ -27,6 +27,10 @@ targets:
     platform: iOS
     sources:
       - path: DriveIn
+      - path: Shared
+    dependencies:
+      # Live Activity for the Lock Screen and the CarPlay Dashboard (no CarPlay entitlement needed).
+      - target: DriveInWidgets
     settings:
       base:
         PRODUCT_NAME: DriveIn
@@ -42,6 +46,22 @@ targets:
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
+
+  DriveInWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: DriveInWidgets
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_NAME: DriveInWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.ahmedps520svg.drivein.widgets
+        INFOPLIST_FILE: Config/Widgets-Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) DRIVEIN_WIDGET
+        SKIP_INSTALL: YES
 
 schemes:
   DriveIn:
