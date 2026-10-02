@@ -229,8 +229,11 @@ jobs:
           run_app 4-simulated-driving 6 -hasShownWelcome YES -DriveInSimulation driving
           run_app 5-simulated-stop 16 -hasShownWelcome YES -DriveInSimulation stopped
 
-          if xcrun simctl spawn "$UDID" launchctl list | grep -q "UIKitApplication:$BUNDLE"; then
-            log "DriveIn is still running."
+          # Capture first: with pipefail, `launchctl list | grep -q` fails whenever grep stops
+          # reading early and launchctl gets SIGPIPE, even though DriveIn is running.
+          services=$(limit 60 xcrun simctl spawn "$UDID" launchctl list || true)
+          if grep -q "UIKitApplication:$BUNDLE" <<< "$services"; then
+            log "DriveIn is still running: $(grep "UIKitApplication:$BUNDLE" <<< "$services")"
           else
             log "DriveIn is not running: it crashed or was killed."
             exit 1
